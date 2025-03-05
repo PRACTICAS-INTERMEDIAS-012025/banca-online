@@ -22,7 +22,7 @@ pipeline {
 
         stage('Deploy Backend') {
             steps {
-                echo 'Aquí iría el despliegue del backend'
+                echo 'Aquí iría el despliegue del frontend'
             }
         }
     }
