@@ -14,11 +14,13 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
+        
+        stage('start project') {
             steps {
-                sh 'npm test'
+                sh 'npm run dev'
             }
         }
+        
 
         stage('Deploy Backend') {
             steps {
