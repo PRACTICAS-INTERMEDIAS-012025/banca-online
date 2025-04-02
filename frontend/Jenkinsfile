@@ -1,30 +1,59 @@
 pipeline {
     agent any
-
+    environment {
+        DOCKER_IMAGE = "banca_virtual_frontend"
+        DOCKER_CREDENTIALS = 'docker-pass'
+        DOCKER_USERNAME = 'luisbaquiax'
+        API_URL = 'http://localhost:3000'
+    }
     stages {
-        stage('Checkout') {
+        stage('Clonar repositorio') {
             steps {
-                git 'https://github.com/PRACTICAS-INTERMEDIAS-012025/banca-online-frontend'
+                script {
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/develop']],
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/PRACTICAS-INTERMEDIAS-012025/banca-online-frontend.git',
+                            credentialsId: 'github-token'
+                        ]]
+                    ])
+                }
+            }
+        }
+        stage('Login to Docker') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'docker-pass', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        bat "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
+                    }
+                }
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Preparar archivo .env') {
             steps {
-                sh 'npm install'
+                script {
+                    writeFile file: '.env', text: "VITE_API_BASE_URL=${API_URL}"
+                }
+            }
+        }        
+
+         stage('Build Docker Image') {
+            steps {
+                script {
+                    bat "docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
+                }
             }
         }
-
-        
-        stage('start project') {
+        stage('Push Docker Image to Docker Hub') {
             steps {
-                sh 'npm run dev'
-            }
-        }
-        
-
-        stage('Deploy Backend') {
-            steps {
-                echo 'Aquí iría el despliegue del frontend'
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS) {
+                        bat "docker tag ${DOCKER_IMAGE}:${BUILD_NUMBER} ${DOCKER_USERNAME}/${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                        bat "docker push ${DOCKER_USERNAME}/${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                    }
+                }
             }
         }
     }
